@@ -1,0 +1,28 @@
+{
+  "id": "hybrid_best_customer_margin_1997",
+  "question": "Per the KPI definition of gross margin, who was the top customer by gross margin in 1997? Assume CostOfGoods is approximated by 70% of UnitPrice if not available. Return {customer:str, margin:float}.",
+  "events": [
+    {
+      "router": "rag"
+    },
+    {
+      "retrieved": [
+        {
+          "id": "kpi_definitions.md::chunk2",
+          "text": "## Gross Margin\n- GM = SUM((UnitPrice - CostOfGoods) * Quantity * (1 - Discount))\n- If cost is missing, approximate with category-level average (document your approach).",
+          "score": 0.4196924484405997
+        },
+        {
+          "id": "catalog.md::chunk0",
+          "text": "\ufeff# Catalog Snapshot\n- Categories include Beverages, Condiments, Confections, Dairy Products, Grains/Cereals, Meat/Poultry, Produce, Seafood.\n- Products map to categories as in the Northwind DB.",
+          "score": 0.12735856172002927
+        },
+        {
+          "id": "kpi_definitions.md::chunk0",
+          "text": "\ufeff# KPI Definitions\n## Average Order Value (AOV)",
+          "score": 0.08925463416506708
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+[
+  {
+    "event": "start",
+    "qid": "hybrid_aov_winter_1997",
+    "question": "Using the AOV definition from the KPI docs, what was the Average Order Value during 'Winter Classics 1997'? Return a float rounded to 2 decimals.",
+    "format_hint": "float",
+    "ts": 1764206948.4765854
+  },
+  {
+    "event": "route",
+    "qid": "hybrid_aov_winter_1997",
+    "route": "hybrid",
+    "ts": 1764206948.476696
+  },
+  {
+    "event": "retrieve",
+    "qid": "hybrid_aov_winter_1997",
+    "retrieved": [
+      "kpi_definitions::chunk0",
+      "marketing_calendar::chunk2",
+      "catalog::chunk0",
+      "marketing_calendar::chunk1",
+      "marketing_calendar::chunk0"
+    ],
+    "ts": 1764206948.4774244
+  },
+  {
+    "event": "plan",
+    "qid": "hybrid_aov_winter_1997",
+    "plan": {
+      "date_from": "2017-12-01",
+      "date_to": "2017-12-31",
+      "categories": [
+        "Beverages",
+        "Condiments",
+        "Confections",
+        "Dairy Products",
+        "Grains/Cereals",
+        "Meat/Poultry",
+        "Produce",
+        "Seafood"
+      ],
+      "kpi_hint": "AOV"
+    },
+    "ts": 1764206948.477582
+  },
+  {
+    "event": "schema",
+    "qid": "hybrid_aov_winter_1997",
+    "schema_tables": [
+      "Categories",
+      "CustomerCustomerDemo",
+      "CustomerDemographics",
+      "Customers",
+      "EmployeeTerritories",
+      "Employees",
+      "Order Details",
+      "Orders",
+      "Products",
+      "Regions",
+      "Shippers",
+      "Suppliers",
+      "Territories",
+      "sqlite_sequence"
+    ],
+    "ts": 1764206948.4786952
+  },
+  {
+    "event": "nl2sql_generate",
+    "qid": "hybrid_aov_winter_1997",
+    "sql": "SELECT ROUND( SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) * 1.0 / NULLIF(COUNT(DISTINCT o.OrderID), 0), 2) as aov FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID WHERE o.OrderDate BETWEEN '2017-12-01' AND '2017-12-31';",
+    "meta": {
+      "intent": "aov_date_range",
+      "template": "_tmpl_aov_date_range",
+      "optimization_applied": true
+    },
+    "attempt": 1,
+    "ts": 1764206948.478777
+  },
+  {
+    "event": "exec_ok",
+    "qid": "hybrid_aov_winter_1997",
+    "rows": 1,
+    "cols": [
+      "aov"
+    ],
+    "attempt": 1,
+    "ts": 1764206948.577927
+  },
+  {
+    "event": "final",
+    "qid": "hybrid_aov_winter_1997",
+    "out": {
+      "id": "hybrid_aov_winter_1997",
+      "final_answer": 21032.34,
+      "sql": "SELECT ROUND( SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)) * 1.0 / NULLIF(COUNT(DISTINCT o.OrderID), 0), 2) as aov FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID WHERE o.OrderDate BETWEEN '2017-12-01' AND '2017-12-31';",
+      "confidence": 0.99,
+      "explanation": "Computed scalar value from 1 database rows.",
+      "citations": [
+        "Order Details",
+        "Orders",
+        "catalog::chunk0",
+        "kpi_definitions::chunk0",
+        "marketing_calendar::chunk0",
+        "marketing_calendar::chunk1",
+        "marketing_calendar::chunk2"
+      ]
+    },
+    "attempts": 1,
+    "repaired": 0,
+    "ts": 1764206948.5781257
+  }
+]

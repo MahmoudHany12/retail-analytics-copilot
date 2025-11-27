@@ -1,0 +1,28 @@
+{
+  "id": "hybrid_top_category_qty_summer_1997",
+  "question": "During 'Summer Beverages 1997' as defined in the marketing calendar, which product category had the highest total quantity sold? Return {category:str, quantity:int}.",
+  "events": [
+    {
+      "router": "rag"
+    },
+    {
+      "retrieved": [
+        {
+          "id": "marketing_calendar.md::chunk0",
+          "text": "\ufeff# Northwind Marketing Calendar (1997)",
+          "score": 0.34218182641148054
+        },
+        {
+          "id": "catalog.md::chunk0",
+          "text": "\ufeff# Catalog Snapshot\n- Categories include Beverages, Condiments, Confections, Dairy Products, Grains/Cereals, Meat/Poultry, Produce, Seafood.\n- Products map to categories as in the Northwind DB.",
+          "score": 0.2253951844466427
+        },
+        {
+          "id": "marketing_calendar.md::chunk1",
+          "text": "## Summer Beverages 1997\n- Dates: 1997-06-01 to 1997-06-30\n- Notes: Focus on Beverages and Condiments.",
+          "score": 0.20451711432145742
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "rag_policy_beverages_return_days",
+  "question": "According to the product policy, what is the return window (days) for unopened Beverages? Return an integer.",
+  "events": [
+    {
+      "router": "rag"
+    },
+    {
+      "retrieved": [
+        {
+          "id": "product_policy.md::chunk0",
+          "text": "\ufeff# Returns & Policy\n- Perishables (Produce, Seafood, Dairy): 3\u20137 days.\n- Beverages unopened: 14 days; opened: no returns.\n- Non-perishables: 30 days.",
+          "score": 0.340735048225129
+        },
+        {
+          "id": "catalog.md::chunk0",
+          "text": "\ufeff# Catalog Snapshot\n- Categories include Beverages, Condiments, Confections, Dairy Products, Grains/Cereals, Meat/Poultry, Produce, Seafood.\n- Products map to categories as in the Northwind DB.",
+          "score": 0.19661808358885002
+        },
+        {
+          "id": "marketing_calendar.md::chunk1",
+          "text": "## Summer Beverages 1997\n- Dates: 1997-06-01 to 1997-06-30\n- Notes: Focus on Beverages and Condiments.",
+          "score": 0.11497942111316864
+        }
+      ]
+    }
+  ]
+}

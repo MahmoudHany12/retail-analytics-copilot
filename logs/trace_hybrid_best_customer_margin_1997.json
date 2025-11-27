@@ -1,0 +1,118 @@
+[
+  {
+    "event": "start",
+    "qid": "hybrid_best_customer_margin_1997",
+    "question": "Per the KPI definition of gross margin, who was the top customer by gross margin in 1997? Assume CostOfGoods is approximated by 70% of UnitPrice if not available. Return {customer:str, margin:float}.",
+    "format_hint": "{customer:str, margin:float}",
+    "ts": 1764206949.1754925
+  },
+  {
+    "event": "route",
+    "qid": "hybrid_best_customer_margin_1997",
+    "route": "hybrid",
+    "ts": 1764206949.175613
+  },
+  {
+    "event": "retrieve",
+    "qid": "hybrid_best_customer_margin_1997",
+    "retrieved": [
+      "kpi_definitions::chunk2",
+      "catalog::chunk0",
+      "kpi_definitions::chunk0",
+      "marketing_calendar::chunk1",
+      "marketing_calendar::chunk2"
+    ],
+    "ts": 1764206949.176401
+  },
+  {
+    "event": "plan",
+    "qid": "hybrid_best_customer_margin_1997",
+    "plan": {
+      "date_from": "2013-01-01",
+      "date_to": "2013-12-31",
+      "categories": [
+        "Beverages",
+        "Condiments",
+        "Confections",
+        "Dairy Products",
+        "Grains/Cereals",
+        "Meat/Poultry",
+        "Produce",
+        "Seafood"
+      ],
+      "kpi_hint": "MARGIN"
+    },
+    "ts": 1764206949.1765306
+  },
+  {
+    "event": "schema",
+    "qid": "hybrid_best_customer_margin_1997",
+    "schema_tables": [
+      "Categories",
+      "CustomerCustomerDemo",
+      "CustomerDemographics",
+      "Customers",
+      "EmployeeTerritories",
+      "Employees",
+      "Order Details",
+      "Orders",
+      "Products",
+      "Regions",
+      "Shippers",
+      "Suppliers",
+      "Territories",
+      "sqlite_sequence"
+    ],
+    "ts": 1764206949.1775544
+  },
+  {
+    "event": "nl2sql_generate",
+    "qid": "hybrid_best_customer_margin_1997",
+    "sql": "SELECT cu.CompanyName as customer, ROUND(SUM((od.UnitPrice * (1 - 0.7)) * od.Quantity * (1 - od.Discount)), 2) as margin FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID JOIN Customers cu ON cu.CustomerID = o.CustomerID WHERE strftime('%Y', o.OrderDate) = '2013' GROUP BY cu.CustomerID ORDER BY margin DESC LIMIT 1;",
+    "meta": {
+      "intent": "best_customer_margin_year",
+      "template": "_tmpl_best_customer_margin_year",
+      "optimization_applied": true
+    },
+    "attempt": 1,
+    "ts": 1764206949.1776829
+  },
+  {
+    "event": "exec_ok",
+    "qid": "hybrid_best_customer_margin_1997",
+    "rows": 1,
+    "cols": [
+      "customer",
+      "margin"
+    ],
+    "attempt": 1,
+    "ts": 1764206949.4281907
+  },
+  {
+    "event": "final",
+    "qid": "hybrid_best_customer_margin_1997",
+    "out": {
+      "id": "hybrid_best_customer_margin_1997",
+      "final_answer": {
+        "customer": "Great Lakes Food Market",
+        "margin": 238454.4
+      },
+      "sql": "SELECT cu.CompanyName as customer, ROUND(SUM((od.UnitPrice * (1 - 0.7)) * od.Quantity * (1 - od.Discount)), 2) as margin FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID JOIN Customers cu ON cu.CustomerID = o.CustomerID WHERE strftime('%Y', o.OrderDate) = '2013' GROUP BY cu.CustomerID ORDER BY margin DESC LIMIT 1;",
+      "confidence": 0.99,
+      "explanation": "Retrieved object with fields: customer, margin.",
+      "citations": [
+        "Customers",
+        "Order Details",
+        "Orders",
+        "catalog::chunk0",
+        "kpi_definitions::chunk0",
+        "kpi_definitions::chunk2",
+        "marketing_calendar::chunk1",
+        "marketing_calendar::chunk2"
+      ]
+    },
+    "attempts": 1,
+    "repaired": 0,
+    "ts": 1764206949.4284253
+  }
+]

@@ -1,0 +1,119 @@
+[
+  {
+    "event": "start",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "question": "During 'Summer Beverages 1997' as defined in the marketing calendar, which product category had the highest total quantity sold? Return {category:str, quantity:int}.",
+    "format_hint": "{category:str, quantity:int}",
+    "ts": 1764206948.3510354
+  },
+  {
+    "event": "route",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "route": "hybrid",
+    "ts": 1764206948.3510902
+  },
+  {
+    "event": "retrieve",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "retrieved": [
+      "marketing_calendar::chunk0",
+      "catalog::chunk0",
+      "marketing_calendar::chunk1",
+      "kpi_definitions::chunk2",
+      "kpi_definitions::chunk1"
+    ],
+    "ts": 1764206948.351843
+  },
+  {
+    "event": "plan",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "plan": {
+      "date_from": "2013-06-01",
+      "date_to": "2013-06-30",
+      "categories": [
+        "Beverages",
+        "Condiments",
+        "Confections",
+        "Dairy Products",
+        "Grains/Cereals",
+        "Meat/Poultry",
+        "Produce",
+        "Seafood"
+      ],
+      "kpi_hint": "QUANTITY"
+    },
+    "ts": 1764206948.3520105
+  },
+  {
+    "event": "schema",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "schema_tables": [
+      "Categories",
+      "CustomerCustomerDemo",
+      "CustomerDemographics",
+      "Customers",
+      "EmployeeTerritories",
+      "Employees",
+      "Order Details",
+      "Orders",
+      "Products",
+      "Regions",
+      "Shippers",
+      "Suppliers",
+      "Territories",
+      "sqlite_sequence"
+    ],
+    "ts": 1764206948.3529482
+  },
+  {
+    "event": "nl2sql_generate",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "sql": "SELECT c.CategoryName as category, SUM(od.Quantity) as quantity FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID JOIN Products p ON p.ProductID = od.ProductID JOIN Categories c ON c.CategoryID = p.CategoryID WHERE o.OrderDate BETWEEN '2013-06-01' AND '2013-06-30' GROUP BY c.CategoryID ORDER BY quantity DESC LIMIT 1;",
+    "meta": {
+      "intent": "top_category_qty_date_range",
+      "template": "_tmpl_top_category_qty",
+      "optimization_applied": true
+    },
+    "attempt": 1,
+    "ts": 1764206948.3529937
+  },
+  {
+    "event": "exec_ok",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "rows": 1,
+    "cols": [
+      "category",
+      "quantity"
+    ],
+    "attempt": 1,
+    "ts": 1764206948.4755738
+  },
+  {
+    "event": "final",
+    "qid": "hybrid_top_category_qty_summer_1997",
+    "out": {
+      "id": "hybrid_top_category_qty_summer_1997",
+      "final_answer": {
+        "category": "Confections",
+        "quantity": 17372
+      },
+      "sql": "SELECT c.CategoryName as category, SUM(od.Quantity) as quantity FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID JOIN Products p ON p.ProductID = od.ProductID JOIN Categories c ON c.CategoryID = p.CategoryID WHERE o.OrderDate BETWEEN '2013-06-01' AND '2013-06-30' GROUP BY c.CategoryID ORDER BY quantity DESC LIMIT 1;",
+      "confidence": 0.99,
+      "explanation": "Retrieved object with fields: category, quantity.",
+      "citations": [
+        "Categories",
+        "Order Details",
+        "Orders",
+        "Products",
+        "catalog::chunk0",
+        "kpi_definitions::chunk1",
+        "kpi_definitions::chunk2",
+        "marketing_calendar::chunk0",
+        "marketing_calendar::chunk1"
+      ]
+    },
+    "attempts": 1,
+    "repaired": 0,
+    "ts": 1764206948.4757807
+  }
+]

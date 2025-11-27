@@ -1,0 +1,28 @@
+{
+  "id": "hybrid_aov_winter_1997",
+  "question": "Using the AOV definition from the KPI docs, what was the Average Order Value during 'Winter Classics 1997'? Return a float rounded to 2 decimals.",
+  "events": [
+    {
+      "router": "rag"
+    },
+    {
+      "retrieved": [
+        {
+          "id": "kpi_definitions.md::chunk0",
+          "text": "\ufeff# KPI Definitions\n## Average Order Value (AOV)",
+          "score": 0.46713283170354414
+        },
+        {
+          "id": "marketing_calendar.md::chunk2",
+          "text": "## Winter Classics 1997\n- Dates: 1997-12-01 to 1997-12-31\n- Notes: Push Dairy Products and Confections for holiday gifting.",
+          "score": 0.22033028261509777
+        },
+        {
+          "id": "catalog.md::chunk0",
+          "text": "\ufeff# Catalog Snapshot\n- Categories include Beverages, Condiments, Confections, Dairy Products, Grains/Cereals, Meat/Poultry, Produce, Seafood.\n- Products map to categories as in the Northwind DB.",
+          "score": 0.17770876662959173
+        }
+      ]
+    }
+  ]
+}

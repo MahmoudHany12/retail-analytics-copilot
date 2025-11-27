@@ -1,0 +1,115 @@
+[
+  {
+    "event": "start",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "question": "Total revenue from the 'Beverages' category during 'Summer Beverages 1997' dates. Return a float rounded to 2 decimals.",
+    "format_hint": "float",
+    "ts": 1764206949.0658386
+  },
+  {
+    "event": "route",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "route": "hybrid",
+    "ts": 1764206949.0659208
+  },
+  {
+    "event": "retrieve",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "retrieved": [
+      "marketing_calendar::chunk1",
+      "marketing_calendar::chunk2",
+      "catalog::chunk0",
+      "marketing_calendar::chunk0",
+      "kpi_definitions::chunk2"
+    ],
+    "ts": 1764206949.0667415
+  },
+  {
+    "event": "plan",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "plan": {
+      "date_from": "2013-06-01",
+      "date_to": "2013-06-30",
+      "categories": [
+        "Beverages",
+        "Condiments",
+        "Confections",
+        "Dairy Products",
+        "Grains/Cereals",
+        "Meat/Poultry",
+        "Produce",
+        "Seafood"
+      ],
+      "kpi_hint": "REVENUE"
+    },
+    "ts": 1764206949.0668793
+  },
+  {
+    "event": "schema",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "schema_tables": [
+      "Categories",
+      "CustomerCustomerDemo",
+      "CustomerDemographics",
+      "Customers",
+      "EmployeeTerritories",
+      "Employees",
+      "Order Details",
+      "Orders",
+      "Products",
+      "Regions",
+      "Shippers",
+      "Suppliers",
+      "Territories",
+      "sqlite_sequence"
+    ],
+    "ts": 1764206949.067949
+  },
+  {
+    "event": "nl2sql_generate",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "sql": "SELECT ROUND(SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)), 2) as revenue FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID JOIN Products p ON p.ProductID = od.ProductID JOIN Categories c ON c.CategoryID = p.CategoryID WHERE c.CategoryName = 'Beverages' AND o.OrderDate BETWEEN '2013-06-01' AND '2013-06-30';",
+    "meta": {
+      "intent": "category_revenue_date_range",
+      "template": "_tmpl_category_revenue",
+      "optimization_applied": true
+    },
+    "attempt": 1,
+    "ts": 1764206949.0680506
+  },
+  {
+    "event": "exec_ok",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "rows": 1,
+    "cols": [
+      "revenue"
+    ],
+    "attempt": 1,
+    "ts": 1764206949.174611
+  },
+  {
+    "event": "final",
+    "qid": "hybrid_revenue_beverages_summer_1997",
+    "out": {
+      "id": "hybrid_revenue_beverages_summer_1997",
+      "final_answer": 590780.5,
+      "sql": "SELECT ROUND(SUM(od.UnitPrice * od.Quantity * (1 - od.Discount)), 2) as revenue FROM [Order Details] od JOIN Orders o ON o.OrderID = od.OrderID JOIN Products p ON p.ProductID = od.ProductID JOIN Categories c ON c.CategoryID = p.CategoryID WHERE c.CategoryName = 'Beverages' AND o.OrderDate BETWEEN '2013-06-01' AND '2013-06-30';",
+      "confidence": 0.99,
+      "explanation": "Computed scalar value from 1 database rows.",
+      "citations": [
+        "Categories",
+        "Order Details",
+        "Orders",
+        "Products",
+        "catalog::chunk0",
+        "kpi_definitions::chunk2",
+        "marketing_calendar::chunk0",
+        "marketing_calendar::chunk1",
+        "marketing_calendar::chunk2"
+      ]
+    },
+    "attempts": 1,
+    "repaired": 0,
+    "ts": 1764206949.1747487
+  }
+]

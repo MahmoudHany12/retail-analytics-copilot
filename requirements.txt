@@ -1,0 +1,10 @@
+﻿click
+pydantic
+rich
+numpy
+pandas
+scikit-learn
+dspy-ai
+langgraph
+langchain-core
+rank-bm25
