@@ -43,6 +43,29 @@ def interactive(out_file: str | None = None) -> None:
         print("Result:")
         print(json.dumps(res, ensure_ascii=False, indent=2))
 
+        # Also show trace summary (route / plan / sql) when available
+        trace_path = f"logs/trace_{qid}.json"
+        try:
+            with open(trace_path, "r", encoding="utf-8") as tf:
+                trace = json.load(tf)
+            # Extract simple events
+            route = None
+            plan = None
+            sql = None
+            for e in trace:
+                if e.get("event") == "route":
+                    route = e.get("route")
+                if e.get("event") == "plan":
+                    plan = e.get("plan")
+                if e.get("event") == "nl2sql_generate":
+                    sql = e.get("sql")
+            print("Trace summary:")
+            print(f"  route: {route}")
+            print(f"  plan: {plan}")
+            print(f"  sql: {sql}")
+        except Exception:
+            pass
+
         # Optionally append to JSONL
         if out_file:
             with open(out_file, "a", encoding="utf-8") as f:

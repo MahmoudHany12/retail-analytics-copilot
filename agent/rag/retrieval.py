@@ -7,6 +7,7 @@ from pathlib import Path
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
+from collections import Counter
 
 DOCS_PATH = Path(__file__).resolve().parents[2] / "docs"
 
@@ -79,7 +80,8 @@ class Retriever:
             self.vectorizer = TfidfVectorizer().fit([" "])
             self.tfidf = self.vectorizer.transform([" "])
         else:
-            self.vectorizer = TfidfVectorizer(norm="l2", use_idf=True, smooth_idf=True, sublinear_tf=False)
+            # use english stop words to reduce noise and increase chance of meaningful scores
+            self.vectorizer = TfidfVectorizer(norm="l2", use_idf=True, smooth_idf=True, sublinear_tf=False, stop_words='english')
             self.tfidf = self.vectorizer.fit_transform(corpus)
         self._built = True
 
@@ -92,12 +94,37 @@ class Retriever:
         # deterministic tie-break: sort by score desc then chunk_id asc
         indices = np.argsort(-scores)  # descending
         results = []
+
+        # If TF-IDF yields no positive signals (all scores <= 0) use a cheap overlap heuristic
+        if np.all(scores <= 0):
+            # Token overlap scoring (simple, deterministic)
+            qtokens = [t for t in re.findall(r"\w+", query.lower()) if len(t) > 1]
+            def overlap_score(text: str) -> int:
+                tokens = [t for t in re.findall(r"\w+", text.lower()) if len(t) > 1]
+                c = Counter(tokens)
+                return sum(c[t] for t in qtokens)
+
+            scored = [(i, overlap_score(self.chunks[i].text)) for i in range(len(self.chunks))]
+            scored.sort(key=lambda x: (-x[1], x[0]))
+            for i, sc in scored[:k]:
+                chunk = self.chunks[int(i)]
+                results.append(
+                    {
+                        "chunk_id": chunk.chunk_id,
+                        "source": chunk.source,
+                        "idx": chunk.idx,
+                        "text": chunk.text,
+                        "score": float(sc),
+                    }
+                )
+            return results
+
+        # Normal TF-IDF path: return top-k chunks with non-negative scores
         added = 0
         for idx in indices:
-            if scores[idx] <= 0 and added >= k:
-                break
             if added >= k:
                 break
+            sc = float(scores[idx])
             chunk = self.chunks[int(idx)]
             results.append(
                 {
@@ -105,7 +132,7 @@ class Retriever:
                     "source": chunk.source,
                     "idx": chunk.idx,
                     "text": chunk.text,
-                    "score": float(scores[idx]),
+                    "score": sc,
                 }
             )
             added += 1

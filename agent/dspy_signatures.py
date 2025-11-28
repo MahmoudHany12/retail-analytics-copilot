@@ -16,6 +16,7 @@ import json
 import math
 import random
 from copy import deepcopy
+from collections import Counter
 
 # Seed deterministic randomness
 random.seed(0)
@@ -28,56 +29,53 @@ class Router:
     """
 
     def __init__(self):
-        # Questions that are RAG-only (policy, returns, definitions)
-        # Must be very precise to avoid false positive routing
-        self.rag_only_patterns = [
-            ("policy", "return"),  # must have both "policy" and "return"
-            ("return window",),
-            ("return days",),
-            ("unopened beverages",),
-        ]
-        # SQL-only patterns (no time constraints needed)
-        self.sql_only_patterns = [
-            ("top 3 products", "revenue", "alltime"),
-            ("top 3 products",),
-        ]
-        # Hybrid patterns (data + time + SQL aggregate)
-        self.hybrid_patterns = [
-            ("during", "summer"),
-            ("during", "winter"),
-            ("during", "1997"),
-            ("category", "quantity", "summer"),
-            ("aov", "winter"),
-            ("aov", "during"),
-            ("revenue", "beverages", "summer"),
-            ("best customer", "margin", "1997"),
-            ("gross margin", "1997"),
+        # Small training examples used to bias routing decisions
+        # Each entry is (intent, example_text)
+        self.training_examples = [
+            ("rag", "according to the product policy what is the return window for beverages"),
+            ("rag", "return days for unopened beverages as per policy"),
+            ("sql", "top 3 products by total revenue all-time"),
+            ("sql", "list top 3 products by revenue"),
+            ("hybrid", "which product category had the highest total quantity sold during summer 1997"),
+            ("hybrid", "average order value during winter 1997"),
+            ("hybrid", "revenue for Beverages in summer 1997"),
+            ("hybrid", "top customer by gross margin in 1997"),
+            ("sql", "total revenue by product"),
+            ("hybrid", "quantity sold in June 1997"),
+            ("rag", "where can I find the marketing calendar for summer promotions"),
+            ("sql", "which products generated the most revenue"),
+            ("hybrid", "AOV for December 1997"),
+            ("rag", "what does catalog.md say about beverage storage"),
+            ("sql", "top selling items by revenue"),
         ]
 
+        # Precompute token sets for examples for quick scoring
+        self._example_tokens = [(intent, set(re.findall(r"\w+", ex.lower()))) for intent, ex in self.training_examples]
+
     def predict(self, question: str) -> str:
+        # Tokenize question
+        qtokens = set(re.findall(r"\w+", question.lower()))
+
+        # Score training examples by token overlap
+        scores = Counter()
+        for intent, toks in self._example_tokens:
+            overlap = len(qtokens & toks)
+            if overlap > 0:
+                scores[intent] += overlap
+
+        if scores:
+            # pick highest scoring intent; deterministic tie-break by intent name
+            best = sorted(scores.items(), key=lambda x: (-x[1], x[0]))[0][0]
+            return best
+
+        # Fallback heuristics when no training match: inspect keywords
         q = question.lower()
-        
-        # Priority 1: Check RAG-only (most specific patterns first)
-        for pattern in self.rag_only_patterns:
-            if all(p in q for p in pattern):
-                return "rag"
-        
-        # Priority 2: Check SQL-only (all keywords must match)
-        for pattern in self.sql_only_patterns:
-            if all(p in q for p in pattern):
-                return "sql"
-        
-        # Priority 3: Check Hybrid (data + SQL)
-        for pattern in self.hybrid_patterns:
-            if all(p in q for p in pattern):
-                return "hybrid"
-        
-        # Fallback: if has numeric/aggregate keywords -> sql, else hybrid
-        if any(kw in q for kw in ["top", "revenue", "total", "average", "margin", "quantity"]):
-            if any(kw in q for kw in ["during", "summer", "winter", "1997", "date"]):
-                return "hybrid"
+        if any(kw in q for kw in ["policy", "return", "return window", "unopened", "catalog", "marketing calendar"]):
+            return "rag"
+        if any(kw in q for kw in ["during", "summer", "winter", "1997", "date", "month", "year"]):
+            return "hybrid"
+        if any(kw in q for kw in ["top", "revenue", "total", "average", "margin", "quantity", "aov"]):
             return "sql"
-        
         return "hybrid"
 
 
@@ -111,11 +109,11 @@ class Planner:
         Maps year references to actual available data (1997->2023 for legacy test cases).
         """
         plan = {"date_from": None, "date_to": None, "categories": [], "kpi_hint": None}
-        
+
         # Combine retrieved docs with question for analysis
         doc_text = " ".join([c.get("text", "") for c in retrieved_chunks])
         combined_text = question + " " + doc_text
-        
+
         # Check if question references a specific year/season (for mapping)
         ql = question.lower()
         should_map = False
@@ -138,14 +136,26 @@ class Planner:
             plan["date_from"] = f"{target_year}-01-01"
             plan["date_to"] = f"{target_year}-12-31"
         
-        # If no specific mapping applied, extract dates from docs
+        # If no specific mapping applied, extract dates from docs (e.g., marketing_calendar)
         if not should_map:
-            dates = self.DATE_RE.findall(doc_text)
-            if dates:
-                if len(dates) >= 2:
-                    plan["date_from"], plan["date_to"] = dates[0], dates[1]
+            # Try to find Season Year patterns inside retrieved docs
+            m = re.search(r"(Summer|Winter)\s+(\d{4})", doc_text, re.IGNORECASE)
+            if m:
+                season = m.group(1).lower()
+                year = m.group(2)
+                if season == "summer":
+                    plan["date_from"] = f"{year}-06-01"
+                    plan["date_to"] = f"{year}-06-30"
                 else:
-                    plan["date_from"] = plan["date_to"] = dates[0]
+                    plan["date_from"] = f"{year}-12-01"
+                    plan["date_to"] = f"{year}-12-31"
+            else:
+                dates = self.DATE_RE.findall(doc_text)
+                if dates:
+                    if len(dates) >= 2:
+                        plan["date_from"], plan["date_to"] = dates[0], dates[1]
+                    else:
+                        plan["date_from"] = plan["date_to"] = dates[0]
         
         # Extract categories from both docs and question
         cats = set()
@@ -163,6 +173,12 @@ class Planner:
             plan["kpi_hint"] = "REVENUE"
         elif "quantity" in q or "sold" in q:
             plan["kpi_hint"] = "QUANTITY"
+
+        # Also try to infer KPI from retrieved docs (kpi_definitions)
+        if not plan.get("kpi_hint") and "average order value" in doc_text.lower():
+            plan["kpi_hint"] = "AOV"
+        if not plan.get("kpi_hint") and "gross margin" in doc_text.lower():
+            plan["kpi_hint"] = "MARGIN"
         
         return plan
 
@@ -183,32 +199,23 @@ class NL2SQL:
 
     def _handcrafted_training(self):
         """Tiny training dataset for BootstrapFewShot style optimization."""
+        # At least 15 diverse examples covering AOV, category filters, date ranges, revenue, margins, customers
         return [
-            {
-                "intent": "top3_products_revenue",
-                "q": "Top 3 products by total revenue all-time.",
-                "fn": self._tmpl_top3_products
-            },
-            {
-                "intent": "aov_date_range",
-                "q": "AOV during winter 1997",
-                "fn": self._tmpl_aov_date_range
-            },
-            {
-                "intent": "category_revenue_date_range",
-                "q": "Revenue beverages summer 1997",
-                "fn": self._tmpl_category_revenue
-            },
-            {
-                "intent": "top_category_qty_date_range",
-                "q": "which product category had the highest total quantity sold during summer beverages 1997",
-                "fn": self._tmpl_top_category_qty
-            },
-            {
-                "intent": "best_customer_margin_year",
-                "q": "top customer by gross margin in 1997",
-                "fn": self._tmpl_best_customer_margin_year
-            },
+            {"intent": "top3_products_revenue", "q": "Top 3 products by total revenue all-time.", "fn": self._tmpl_top3_products},
+            {"intent": "top3_products_revenue", "q": "Which products generated the most revenue?", "fn": self._tmpl_top3_products},
+            {"intent": "aov_date_range", "q": "AOV during winter 1997", "fn": self._tmpl_aov_date_range},
+            {"intent": "aov_date_range", "q": "Average order value in December 1997", "fn": self._tmpl_aov_date_range},
+            {"intent": "category_revenue_date_range", "q": "Revenue beverages summer 1997", "fn": self._tmpl_category_revenue},
+            {"intent": "category_revenue_date_range", "q": "Total revenue for Beverages in June 1997", "fn": self._tmpl_category_revenue},
+            {"intent": "top_category_qty_date_range", "q": "which product category had the highest total quantity sold during summer beverages 1997", "fn": self._tmpl_top_category_qty},
+            {"intent": "top_category_qty_date_range", "q": "Highest quantity sold by category in June 1997", "fn": self._tmpl_top_category_qty},
+            {"intent": "best_customer_margin_year", "q": "top customer by gross margin in 1997", "fn": self._tmpl_best_customer_margin_year},
+            {"intent": "best_customer_margin_year", "q": "Who is the best customer by gross margin in 1997?", "fn": self._tmpl_best_customer_margin_year},
+            {"intent": "top3_products_revenue", "q": "Top selling items by revenue", "fn": self._tmpl_top3_products},
+            {"intent": "aov_date_range", "q": "What was the average order value for holiday season 1997?", "fn": self._tmpl_aov_date_range},
+            {"intent": "category_revenue_date_range", "q": "Show revenue for Condiments in June 2013", "fn": self._tmpl_category_revenue},
+            {"intent": "top_category_qty_date_range", "q": "Which category sold most units in June?", "fn": self._tmpl_top_category_qty},
+            {"intent": "best_customer_margin_year", "q": "Which customer delivered the highest margin in 2013?", "fn": self._tmpl_best_customer_margin_year},
         ]
 
     # ============= Template Functions =============
@@ -307,31 +314,32 @@ class NL2SQL:
     
     def _intent_match(self, question: str) -> str:
         """Match question to template intent using keyword patterns."""
-        q = question.lower()
-        
-        # Exact patterns for each intent
-        if "top 3 products" in q and "revenue" in q:
-            return "top3_products_revenue"
-        if ("average order value" in q or "aov" in q) and ("during" in q or "1997" in q):
+        qtokens = set(re.findall(r"\w+", question.lower()))
+
+        # Score training examples by token overlap
+        scores = Counter()
+        for ex in self.train_data:
+            ex_tokens = set(re.findall(r"\w+", ex["q"].lower()))
+            overlap = len(qtokens & ex_tokens)
+            if overlap > 0:
+                scores[ex["intent"]] += overlap
+
+        if scores:
+            chosen = sorted(scores.items(), key=lambda x: (-x[1], x[0]))[0][0]
+            return chosen
+
+        # If no training match, fallback to plan-driven selection if question contains KPI hints
+        if "average order value" in question.lower() or "aov" in question.lower():
             return "aov_date_range"
-        if "category" in q and "highest total quantity" in q:
+        if "quantity" in question.lower() or "sold" in question.lower():
             return "top_category_qty_date_range"
-        if "total revenue" in q and "beverages" in q and ("summer" in q or "1997" in q):
-            return "category_revenue_date_range"
-        if "top customer" in q and "margin" in q and "1997" in q:
+        if "margin" in question.lower() or "gross margin" in question.lower():
             return "best_customer_margin_year"
-        
-        # Fallback detection by KPI keywords
-        if "margin" in q:
-            return "best_customer_margin_year"
-        if "quantity" in q:
-            return "top_category_qty_date_range"
-        if "revenue" in q and "category" not in q:
+        if "revenue" in question.lower():
             return "top3_products_revenue"
-        if "aov" in q or "average order value" in q:
-            return "aov_date_range"
-        
-        return "top3_products_revenue"  # safe default
+
+        # If nothing matches, return an empty intent signalling that higher-level code should consider RAG or ask for clarification
+        return ""
 
     def _bootstrap_train(self):
         """
@@ -409,7 +417,11 @@ class NL2SQL:
         Returns (sql_string, metadata_dict).
         """
         intent = self._intent_match(question)
-        
+
+        # If intent is empty string, be conservative and return empty SQL so higher-level code can choose RAG/hybrid
+        if not intent:
+            return "", {"intent": "none", "template": "none"}
+
         # Find and execute template
         for template in self.templates:
             if template["intent"] == intent:
@@ -423,12 +435,23 @@ class NL2SQL:
                     "optimization_applied": True
                 }
                 return sql, meta
-        
-        # Fallback (should not reach here)
-        sql = self._tmpl_top3_products(plan, schema)
-        if not sql.strip().endswith(";"):
-            sql = sql.strip() + ";"
-        return sql, {"intent": "fallback", "template": "fallback_top3"}
+
+        # As a last resort, if plan contains a KPI hint, map it to a template
+        k = (plan.get("kpi_hint") or "").upper()
+        if k == "AOV":
+            sql = self._tmpl_aov_date_range(plan, schema)
+            return sql, {"intent": "aov_date_range", "template": "_tmpl_aov_date_range", "optimization_applied": False}
+        if k == "REVENUE":
+            sql = self._tmpl_category_revenue(plan, schema)
+            return sql, {"intent": "category_revenue_date_range", "template": "_tmpl_category_revenue", "optimization_applied": False}
+
+        # Final safe default: return top3 only if question explicitly asks for "top" or "top 3"
+        if "top" in question.lower() or "top 3" in question.lower():
+            sql = self._tmpl_top3_products(plan, schema)
+            return sql, {"intent": "top3_products_revenue", "template": "_tmpl_top3_products", "optimization_applied": False}
+
+        # No confident SQL mapping
+        return "", {"intent": "none", "template": "none"}
 
     def predict(self, question: str, plan: Dict[str, Any], schema: Dict[str, List[str]]) -> Tuple[str, Dict[str, Any]]:
         """Alias for generate() for DSPy compatibility."""
